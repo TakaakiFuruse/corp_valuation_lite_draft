@@ -1,7 +1,7 @@
 require 'open-uri'
 require 'spreadsheet'
 require './ticker_code'
-require 'dotenv'
+
 class TickerCodeListParser
   # TickerCodeListParser.new.download_and_extract_codes
   #  -> [.....]

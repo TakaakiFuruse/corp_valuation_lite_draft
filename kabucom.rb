@@ -1,7 +1,9 @@
+require "pry"
 require 'dotenv'
 require "capybara"
 require "capybara/dsl"
 require 'capybara/poltergeist'
+require './passwords'
 
 # poltergeist
 Capybara.default_max_wait_time = 5
@@ -21,7 +23,6 @@ Capybara.register_driver :poltergeist do |app|
     }
   )
 end
-
 
 class KabucomParser
   # KabucomParser.new(2501).run => parse ticker code 2501 info from kabu.com
@@ -57,9 +58,7 @@ class KabucomParser
     }
     visit(shikiho_url)
     shikiho = find_shikiho
-    result_ar.flatten
-    p result_ar
-    p shikiho
+    result_ar.flatten!.compact!
     p "end #{ticker}"
   end
 
@@ -80,8 +79,8 @@ class KabucomParser
 
   def log_in
     visit(kabu_com)
-    fill_in "SsLogonUser", with: "*****"
-    fill_in "SsLogonPassword", with: "****"
+    fill_in "SsLogonUser", with: kabu_com_user
+    fill_in "SsLogonPassword", with: kabu_com_pass
     find("#image1").trigger("click")
   end
 
@@ -94,31 +93,34 @@ class KabucomParser
     entry = [find("#{args[:entry_css]}").text.gsub(/\s/,"")]
 
     unless entry == [args[:entry_name]]
-      Rails.logger.warn "#{self.ticker}: #{args[:entry_name]} is #{entry}"
+      p "CHECK KABUCOM WEBSITE - #{self.ticker}: #{args[:entry_name]} is #{entry}"
     end
 
     entry_ar = entry * @years.length
     ticker_ar = [ticker] * @years.length
 
-    amount = (2..6).to_a.map{|n|
-      find("#{args[:entry_row]}" + "> td:nth-child(#{n})").text.gsub(/,/,"").to_f
-    }.delete_if{|n| n == '--'}
+    amount = (2..6).to_a.map do |n|
+      find("#{args[:entry_row]}" + "> td:nth-child(#{n})")
+      .text
+      .gsub(/,/,"").to_f
+    end.delete_if{|n| n == '--'}
 
-    result = (0..@years.length - 1).to_a.map{ |n|
-      key.zip([@years[n], amount[n], entry_ar[n], ticker_ar[n]]).to_h
-    }
+    result = (0..@years.length - 1).to_a.map do |n|
+      unless @years[n] == 0 && amount[n] == 0
+        key.zip([@years[n], amount[n], entry_ar[n], ticker_ar[n]]).to_h
+      end
+    end
 
     result_ar << result
-
   end
 
   def find_years
     @years = [
-      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(2)").text.to_i,
-      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(3)").text.to_i,
-      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(4)").text.to_i,
-      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(5)").text.to_i,
-      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(3) > td:nth-child(6)").text.to_i
+      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(2)").text.to_i,
+      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(3)").text.to_i,
+      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(4)").text.to_i,
+      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(5)").text.to_i,
+      find("#cbut2 > table:nth-child(2) > tbody > tr:nth-child(2) > td:nth-child(6)").text.to_i
     ].delete_if{|n| n == '--'}
   end
 
@@ -214,4 +216,8 @@ class KabucomParser
 end
 
 
-KabucomParser.new(ticker: 2501).run
+stock = KabucomParser.new(ticker: 3139)
+stock.run
+binding.pry
+stock.shikiho
+stock.result_ar
