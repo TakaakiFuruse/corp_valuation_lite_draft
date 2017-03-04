@@ -1,7 +1,7 @@
 require 'open-uri'
 require 'spreadsheet'
 require './ticker_code'
-
+require 'dotenv'
 class TickerCodeListParser
   # TickerCodeListParser.new.download_and_extract_codes
   #  -> [.....]
@@ -26,7 +26,6 @@ class TickerCodeListParser
     33業種コード 33業種区分  17業種コード
     17業種区分  規模コード 規模区分
   )
-
 
   def initialize(args={})
     @base_url = args[:base_url] || BASE_URL
