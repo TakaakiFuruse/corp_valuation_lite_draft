@@ -1,39 +1,39 @@
-require 'roo'
-require 'rubygems'
 require 'httpclient'
-require './ticker_array'
+require 'pry'
+require 'spreadsheet'
+require './ticker_code'
 
 class TickerCodeListParser
-  # p TickerCodeExtractor.new.codes[0..10]
-  # => [1301, 1332, 1333, 1352, 1377, 1379, 1414, 1417, 1419, 1420, 1514]
   attr_accessor :codes, :http_client
-  attr_reader :base_url, :xls_ar
+
+  BASE_URL = "http://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/"
+  FILE_NAME_AR = ['data_j.xls']
+  STOCK_NAME_TO_REJECT =  [
+    'ETF・ETN',
+    'PRO Market',
+    'REIT・ベンチャーファンド・カントリーファンド',
+    'マザーズ（外国株）',
+    '出資証券',
+    '市場第一部（外国株）',
+    '市場第二部（外国株）',
+    'JASDAQ(スタンダード・外国株）'
+  ]
+
 
   def initialize(args={})
-    @base_url = args[:base_url] || base_url
-    @xls_ar = args[:xls_ar] || xls_ar
+    @base_url = args[:base_url] || BASE_URL
+    @file_name_array = args[:file_name_array] || FILE_NAME_AR
     @http_client = HTTPClient.new
     @codes = []
-    @xls = xls
   end
 
-  def run
+  def download_and_extract_codes
     download_list
-    extract_code
-  end
-
-  private
-
-  def base_url
-    "http://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/"
-  end
-
-  def xls_ar
-    ['data_j.xls']
+    return_ticker_codes
   end
 
   def download_list
-    xls_ar.each do |xls|
+    file_name_array.each do |xls|
       xls_url = base_url + xls
       open(xls, 'wb') do |file|
         file.write http_client.get_content("#{xls_url}")
@@ -41,44 +41,31 @@ class TickerCodeListParser
     end
   end
 
-  def xls
-    ['data_j.xls']
-  end
-
-  def cell_to_reject
-    [
-      'ETF・ETN',
-      'PRO Market',
-      'REIT・ベンチャーファンド・カントリーファンド',
-      'マザーズ（外国株）',
-      '出資証券',
-      '市場第一部（外国株）',
-      '市場第二部（外国株）',
-      'JASDAQ(スタンダード・外国株）'
-    ]
+  def return_ticker_codes
+    read_xls
+    codes.map!(&:to_i)
   end
 
   def read_xls
-    xls.each do |xls|
-      sheet = Roo::Spreadsheet.open(xls, extension: :xlsx)
-      code_kubun_ar = sheet.column(2).zip(sheet.column(4))
-      code_kubun_ar.each do |elm|
-        codes.push(elm[0]) unless reject_ticker_codes(elm[0], elm[1])
+    FILE_NAME_AR.each do |xls|
+      sheet = Spreadsheet.open(xls).worksheets.first
+      row_count = sheet.row_count
+      (1..row_count).to_a.each do |num|
+        unless reject_ticker_codes?(sheet.row(num)[1], sheet.row(num)[3])
+          codes.push(sheet.row(num)[1])
+        end
       end
     end
   end
 
-  def reject_ticker_codes(elm1, elm2)
-    elm1 == 25935.0 && elm1.is_a?(Numeric) && cell_to_reject.include?(elm2)
-  end
+  private
 
-  def extract_code
-    read_xls
-    codes.map!(&:to_i)
+  def reject_ticker_codes?(ticker_code, stock_name)
+    ticker_code == 25935.0 || \
+      !ticker_code.is_a?(Numeric) || \
+      STOCK_NAME_TO_REJECT.include?(stock_name)
   end
 end
 
-
-result_ar = TickerCodeListParser.new.run
-
-p TickerArray.ticker_array == result_ar
+result_ar = TickerCodeListParser.new.return_ticker_codes
+p ticker_code.delete_if{|elm| result_ar.include?(elm)} == []
