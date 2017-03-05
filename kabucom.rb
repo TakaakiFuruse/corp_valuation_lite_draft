@@ -1,11 +1,9 @@
-require "pry"
-require 'dotenv'
 require "capybara"
 require "capybara/dsl"
 require 'capybara/poltergeist'
 require './passwords'
 
-# poltergeist
+# Capybara configuration
 Capybara.default_max_wait_time = 5
 Capybara.ignore_hidden_elements = false
 Capybara.current_driver = :poltergeist
@@ -25,46 +23,58 @@ Capybara.register_driver :poltergeist do |app|
 end
 
 class KabucomParser
+# kabukom = KabucomParser.new => Initializse object
+# kabukom.log_in => log in first
+# p kabukom.get(3139)  will give you a hash like
+#   {:finance=>[{"year"=>2013, "amount" => 75942.891,
+#                "entry" => "売上高", "ticker"=>3139}, ....],
+#    :shikiho=>{:shikiho_info=>"...", :ticker=>2501}}
+
   include Capybara::DSL
-  attr_reader :kabu_com, :ticker_array, :key
+  attr_reader :kabu_com, :key, :kabu_com_user, :kabu_com_password
   attr_accessor :result_ar, :shikiho
+
   HOME_URL = 'https://s10.kabu.co.jp/members/'
   LOGIN_URL = 'https://s10.kabu.co.jp/_mem_bin/members/login.asp?/members/'
 
   def initialize(args={})
     @kabu_com = args[:url] || LOGIN_URL
-    @ticker_array = args[:ticker_array]
     @key = ["year", "amount", "entry", "ticker"]
+    @kabu_com_user = args[:kabu_com_user] || KAB_COM_USER
+    @kabu_com_password = args[:kabu_com_password] || KAB_COM_PASS
     @result_ar = []
     @shikiho = {}
   end
 
-  def run
-    log_in
-    ticker_array.each do |ticker_code|
-      search_stock(ticker_code)
-      p "start #{ticker_code}"
-      find_finance{
-        find_years
-        find_sales(ticker_code)
-        find_oprincome(ticker_code)
-        find_netincome(ticker_code)
-        find_eps(ticker_code)
-        find_dividents(ticker_code)
-        find_s_e(ticker_code)
-        find_long_term_debt(ticker_code)
-        find_short_term_debt(ticker_code)
-        find_dpr(ticker_code)
-        find_r_d(ticker_code)
-      }
-      visit(shikiho_url(ticker_code))
-      self.shikiho = find_shikiho(ticker_code)
-      self.result_ar.flatten!.compact!
-      p self.shikiho
-      p self.result_ar
-      p "end #{ticker_code}"
-      visit(HOME_URL)
-    end
+  def log_in
+    visit(kabu_com)
+    fill_in "SsLogonUser", with: kabu_com_user
+    fill_in "SsLogonPassword", with: kabu_com_password
+    find("#image1").trigger("click")
+    sleep 0.5
+  end
+
+  def get(ticker_code)
+    visit(HOME_URL)
+    search_stock(ticker_code)
+    p "start #{ticker_code}"
+    find_finance{
+      find_years
+      find_sales(ticker_code)
+      find_oprincome(ticker_code)
+      find_netincome(ticker_code)
+      find_eps(ticker_code)
+      find_dividents(ticker_code)
+      find_s_e(ticker_code)
+      find_long_term_debt(ticker_code)
+      find_short_term_debt(ticker_code)
+      find_dpr(ticker_code)
+      find_r_d(ticker_code)
+    }
+    visit(shikiho_url(ticker_code))
+    p "end #{ticker_code}"
+    {finance: result_ar.flatten.compact,
+     shikiho: find_shikiho(ticker_code)}
   end
 
   private
@@ -83,14 +93,6 @@ class KabucomParser
     fill_in "SearchWord", :with => "#{ticker}"
     find(:xpath, "/html/body/table[1]/tbody/tr[2]/td[2]/table/tbody/tr[2]/td[1]/form/table/tbody/tr/td/table/tbody/tr/td[3]/input").trigger("click")
   end
-
-  def log_in
-    visit(kabu_com)
-    fill_in "SsLogonUser", with: kabu_com_user
-    fill_in "SsLogonPassword", with: kabu_com_pass
-    find("#image1").trigger("click")
-  end
-
 
   def shikiho_url(ticker)
     "http://s20.si0.kabu.co.jp/Members/TradeTool/reutersparts/SD_CompanyBrochure.asp?StockCode=#{ticker}&Market=1"
@@ -229,9 +231,4 @@ class KabucomParser
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(6) > td").text
     return {shikiho_info: shikiho, ticker: ticker_code}
   end
-
 end
-
-
-stock = KabucomParser.new(ticker_array: [3139, 2501])
-stock.run
