@@ -1,0 +1,51 @@
+CUIベースで操作ができる
+
+全部クローリングできる
+  東証からTickerリストをダウンロード
+  株価を取得
+    companyをupdate or create
+  財務を取得
+    財務を追加していく
+
+ひとつだけクローリングできる
+  株価を取得
+    companyをupdate
+  財務を取得
+    financeを追加
+  計算をアップデート
+
+失敗した箇所を後でもう一回クローリングできる
+  直前の全部クローリングのセッションを保存
+
+全部のS-marginとROIC五年平均をEXCEL形式で出せる（xlsxがよい）
+
+Tickerを指定すると、個々のROIC平均とS-marginがCUI上で出せる
+個々の財務データがXLSXで出る
+
+設定ファイルに
+  ユーザー名とパスワードが保存できる
+  beta, tax rate, risk free rate が保存できる
+
+
+schema
+  Company has many finance
+    name
+    ticker
+    shikiho
+    shares_outstanding
+    price
+    roic_5year_average
+    safety_margin
+
+  finance belongs to company
+    company_id
+    entry
+    amount
+
+  session
+    ticker
+    failed
+    created_at
+
+model
+  Company => def ROIC, def SafetyMargin, def roic_5yr_avg
