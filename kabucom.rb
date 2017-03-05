@@ -25,15 +25,13 @@ Capybara.register_driver :poltergeist do |app|
 end
 
 class KabucomParser
-  # KabucomParser.new(2501).run => parse ticker code 2501 info from kabu.com
-
   include Capybara::DSL
-  attr_reader :kabu_com, :ticker, :key
+  attr_reader :kabu_com, :ticker_array, :key
   attr_accessor :result_ar, :shikiho
 
   def initialize(args={})
     @kabu_com = args[:url] || 'https://s10.kabu.co.jp/_mem_bin/members/login.asp?/members/'
-    @ticker = args[:ticker]
+    @ticker_array = args[:ticker_array]
     @key = ["year", "amount", "entry", "ticker"]
     @result_ar = []
     @shikiho = {}
@@ -41,25 +39,27 @@ class KabucomParser
 
   def run
     log_in
-    search_stock
-    p "start #{ticker}"
-    find_finance{
-      find_years
-      find_sales
-      find_oprincome
-      find_netincome
-      find_eps
-      find_dividents
-      find_s_e
-      find_long_term_debt
-      find_short_term_debt
-      find_dpr
-      find_r_d
-    }
-    visit(shikiho_url)
-    shikiho = find_shikiho
-    result_ar.flatten!.compact!
-    p "end #{ticker}"
+    ticker_array.each do |ticker_code|
+      search_stock
+      p "start #{ticker_code}"
+      find_finance{
+        find_years(ticker_code)
+        find_sales(ticker_code)
+        find_oprincome(ticker_code)
+        find_netincome(ticker_code)
+        find_eps(ticker_code)
+        find_dividents(ticker_code)
+        find_s_e(ticker_code)
+        find_long_term_debt(ticker_code)
+        find_short_term_debt(ticker_code)
+        find_dpr(ticker_code)
+        find_r_d(ticker_code)
+      }
+      visit(shikiho_url(ticker_code))
+      shikiho = find_shikiho(ticker: ticker_code)
+      result_ar.flatten!.compact!
+      p "end #{ticker_code}"
+    end
   end
 
   def find_finance
@@ -72,7 +72,7 @@ class KabucomParser
     }
   end
 
-  def search_stock
+  def search_stock(ticker)
     fill_in "SearchWord", :with => "#{ticker}"
     find(:xpath, "/html/body/table[1]/tbody/tr[2]/td[2]/table/tbody/tr[2]/td[1]/form/table/tbody/tr/td/table/tbody/tr/td[3]/input").trigger("click")
   end
@@ -85,7 +85,7 @@ class KabucomParser
   end
 
 
-  def shikiho_url
+  def shikiho_url(ticker)
     "http://s20.si0.kabu.co.jp/Members/TradeTool/reutersparts/SD_CompanyBrochure.asp?StockCode=#{ticker}&Market=1"
   end
 
@@ -93,11 +93,11 @@ class KabucomParser
     entry = [find("#{args[:entry_css]}").text.gsub(/\s/,"")]
 
     unless entry == [args[:entry_name]]
-      p "CHECK KABUCOM WEBSITE - #{self.ticker}: #{args[:entry_name]} is #{entry}"
+      p "CHECK KABUCOM WEBSITE - #{args[:ticker]}: #{args[:entry_name]} is #{entry}"
     end
 
     entry_ar = entry * @years.length
-    ticker_ar = [ticker] * @years.length
+    ticker_ar = [args[:ticker]] * @years.length
 
     amount = (2..6).to_a.map do |n|
       find("#{args[:entry_row]}" + "> td:nth-child(#{n})")
@@ -124,8 +124,9 @@ class KabucomParser
     ].delete_if{|n| n == '--'}
   end
 
-  def find_sales
+  def find_sales(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "売上高",
       entry_css: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(5) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(5)"
@@ -133,90 +134,99 @@ class KabucomParser
   end
 
 
-  def find_oprincome
+  def find_oprincome(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "営業利益",
       entry_css: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(6) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(6)"
     )
   end
 
-  def find_netincome
+  def find_netincome(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "当期利益",
       entry_css: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(8) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(8)"
     )
   end
 
-  def find_eps
+  def find_eps(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "EPS（円）",
       entry_css: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(9) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(9)"
     )
   end
 
-  def find_dividents
+  def find_dividents(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "配当（円）",
       entry_css: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(10) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(2) > tbody > tr:nth-child(10)"
     )
   end
 
-  def find_s_e
+  def find_s_e(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "株主資本",
       entry_css: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(7) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(7)"
     )
   end
 
-  def find_long_term_debt
+  def find_long_term_debt(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "長期有利子負債",
       entry_css: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(11) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(11)"
     )
   end
 
-  def find_short_term_debt
+  def find_short_term_debt(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "短期有利子負債",
       entry_css: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(12) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(12)"
     )
   end
 
-  def find_dpr
+  def find_dpr(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "減価償却費",
       entry_css: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(14) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(14)"
     )
   end
 
-  def find_r_d
+  def find_r_d(ticker_code)
     get_finance(
+      ticker: ticker_code,
       entry_name: "研究開発費",
       entry_css: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(15) > td.qcell1.bdrleft1",
       entry_row: "#cbut2 > table:nth-child(4) > tbody > tr:nth-child(15)"
     )
   end
 
-  def find_shikiho
+  def find_shikiho(args={})
     shikiho = find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(3) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(4) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(5) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(6) > td").text
-    return {shikiho_info: shikiho, ticker: ticker}
+    return {shikiho_info: shikiho, ticker: args[:ticker]}
   end
 
 end
 
 
-stock = KabucomParser.new(ticker: 3139)
+stock = KabucomParser.new(ticker_array: [3139])
 stock.run
 binding.pry
 stock.shikiho
