@@ -2,10 +2,11 @@ require 'open-uri'
 require 'nokogiri'
 
 class Yahoo
-  # p Yahoo.new(ticker: 1332).get
-  # => {:時価総額=>115874, :発行済株式数=>277210277, :PER=>11.0,
-  #    :PBR=>1.32, :前日終値=>423, :始値=>419, :現在値=>418,
-  #    :会社名=>"日本水産", :ticker=>1332}
+
+# Yahoo.new(ticker: 1332).get
+# => {:market_cap=>177148, :outstanding=>312430277, :p_e=>11.79,
+#   :p_b=>1.56, :close_price=>567, :open_price=>567,
+#   :current_price=>567, :name=>"日本水産", :ticker=>1332}
 
   attr_reader :yahoo, :rakuten_quote
   attr_accessor :ticker
@@ -79,5 +80,3 @@ class Yahoo
     end
   end
 end
-
-p Yahoo.new(ticker: 1332).get
