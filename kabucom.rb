@@ -28,9 +28,11 @@ class KabucomParser
   include Capybara::DSL
   attr_reader :kabu_com, :ticker_array, :key
   attr_accessor :result_ar, :shikiho
+  HOME_URL = 'https://s10.kabu.co.jp/members/'
+  LOGIN_URL = 'https://s10.kabu.co.jp/_mem_bin/members/login.asp?/members/'
 
   def initialize(args={})
-    @kabu_com = args[:url] || 'https://s10.kabu.co.jp/_mem_bin/members/login.asp?/members/'
+    @kabu_com = args[:url] || LOGIN_URL
     @ticker_array = args[:ticker_array]
     @key = ["year", "amount", "entry", "ticker"]
     @result_ar = []
@@ -40,10 +42,10 @@ class KabucomParser
   def run
     log_in
     ticker_array.each do |ticker_code|
-      search_stock
+      search_stock(ticker_code)
       p "start #{ticker_code}"
       find_finance{
-        find_years(ticker_code)
+        find_years
         find_sales(ticker_code)
         find_oprincome(ticker_code)
         find_netincome(ticker_code)
@@ -56,11 +58,16 @@ class KabucomParser
         find_r_d(ticker_code)
       }
       visit(shikiho_url(ticker_code))
-      shikiho = find_shikiho(ticker: ticker_code)
-      result_ar.flatten!.compact!
+      self.shikiho = find_shikiho(ticker_code)
+      self.result_ar.flatten!.compact!
+      p self.shikiho
+      p self.result_ar
       p "end #{ticker_code}"
+      visit(HOME_URL)
     end
   end
+
+  private
 
   def find_finance
     within_frame('mainbody'){
@@ -215,19 +222,16 @@ class KabucomParser
     )
   end
 
-  def find_shikiho(args={})
+  def find_shikiho(ticker_code)
     shikiho = find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(3) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(4) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(5) > td").text +
       find("body > table:nth-child(1) > tbody > tr > td > table > tbody > tr:nth-child(6) > td").text
-    return {shikiho_info: shikiho, ticker: args[:ticker]}
+    return {shikiho_info: shikiho, ticker: ticker_code}
   end
 
 end
 
 
-stock = KabucomParser.new(ticker_array: [3139])
+stock = KabucomParser.new(ticker_array: [3139, 2501])
 stock.run
-binding.pry
-stock.shikiho
-stock.result_ar
