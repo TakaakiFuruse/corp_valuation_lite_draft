@@ -6,7 +6,7 @@ class Finance < ActiveRecord::Base
     Company.find_by(ticker: ticker).finances << self if self.ok_to_add_comp_id?
   end
 
-  def ok_to_add_comp_id?
+  def ok_to_add_company_id?
     Company.find_by(ticker: ticker).present? && self.company_id.nil?
   end
 end
