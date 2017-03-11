@@ -49,3 +49,75 @@ schema
 
 model
   Company => def ROIC, def SafetyMargin, def roic_5yr_avg
+
+
+===余剰現金先引===
+最新の 売上高 / (売上高 の合計 / 営業利益  の合計) = normal_ebit
+
+normal_ebit * (1 - 税金) ＋ 減価償却 * 0.25 + 研究開発 * 0.25 = normal_ebit_after_tax
+
+excess_cash = 現金 * EXCESSCASH_PROPORTION
+
+weight_of_stock = (株価 * 発行済株式) / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+weight_of_debt = 有利子負債 / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+
+@wacc = weight_of_stock * EQUITY_COST + INTEREST_RATE * (1 - TAX_RATE) * weight_of_debt
+
+epv_of_the_business = normal_ebit_after_tax/wacc
+
+@safety_margin = 1 - ( ( 株価 ＊ 時価総額 ) / (epv_of_the_business) )
+
+@adjusted_roic = normal_ebit / ( (株価 * 発行済株式 - Excess Cash) + 有利子負債 )
+
+@wacc_roic = adjusted_roic / wacc
+==========
+
+===余剰現金後引き===
+
+最新の 売上高 / (売上高 の合計 / 営業利益  の合計) = normal_ebit
+
+normal_ebit * (1 - 税金) ＋ 減価償却 * 0.25 + 研究開発 * 0.25 = normal_ebit_after_tax
+
+excess_cash = 現金 * EXCESSCASH_PROPORTION
+
+weight_of_stock = (株価 * 発行済株式) / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+weight_of_debt = 有利子負債 / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+
+@wacc = weight_of_stock * EQUITY_COST + INTEREST_RATE * (1 - TAX_RATE) * weight_of_debt
+
+epv_of_the_business = normal_ebit_after_tax/wacc
+
+net_cash = 現金 - 有利子負債
+
+company_epv = epv_of_the_business - net_cash
+
+@safety_margin = 1 - ( ( 株価 ＊ 時価総額 ) / (company_epv) )
+
+@adjusted_roic = normal_ebit / ( (株価 * 発行済株式 - Excess Cash) + 有利子負債 )
+
+@wacc_roic = adjusted_roic / wacc
+======
+
+===余剰現金後引き(減価償却・研究開発足し戻しなし)===
+
+最新の 売上高 / (売上高 の合計 / 営業利益  の合計) = normal_ebit
+
+excess_cash = 現金 * EXCESSCASH_PROPORTION
+
+weight_of_stock = (株価 * 発行済株式) / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+weight_of_debt = 有利子負債 / ((株価 * 発行済株式 - Excess Cash) + 有利子負債)
+
+@wacc = weight_of_stock * EQUITY_COST + INTEREST_RATE * (1 - TAX_RATE) * weight_of_debt
+
+epv_of_the_business = normal_ebit/wacc
+
+net_cash = 現金 - 有利子負債
+
+company_epv = epv_of_the_business - net_cash
+
+@safety_margin = 1 - ( ( 株価 ＊ 時価総額 ) / (company_epv) )
+
+@adjusted_roic = normal_ebit / ( (株価 * 発行済株式 - Excess Cash) + 有利子負債 )
+
+@wacc_roic = adjusted_roic / wacc
+======
