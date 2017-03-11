@@ -14,20 +14,19 @@ loop do
   p result unless result.empty?
   puts table.render(:ascii) unless table.empty?
   answer = @prompt.select("機能を選択してください",
-                         %w(全部クローリング
-                            個別銘柄データ表示
-                            全データをエクスポート
-                            個別データをエクスポート
+                         %w(全銘柄のクローリング
+                            個別銘柄のデータ表示
+                            全銘柄のデータをエクスポート
+                            個別の財務データをエクスポート
                             EXIT))
 
-  if answer == '全部クローリング'
+  case answer
+  when '全銘柄のクローリング'
     p 'now crawling all...'
     sleep 1
     result = "全部クローリングが終わりました"
     clear_screen
-  end
-
-  if answer == '個別銘柄データ表示'
+  when '個別銘柄のデータ表示'
     ticker = @prompt.ask('銘柄コードを入力してください')
     p "now crawling #{ticker}..."
     sleep 1
@@ -35,8 +34,8 @@ loop do
     table = TTY::Table.new(['SafetyMargine', 'ROIC', '株価', '目標株価'], [['70%', '10%', '100', '170']])
 
     clear_screen
+  when 'EXIT'
+    exit
   end
-
-  exit if answer == 'EXIT'
 end
 
